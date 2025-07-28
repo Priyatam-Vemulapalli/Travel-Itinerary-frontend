@@ -1,16 +1,16 @@
 class ItineraryService {
     constructor() {
-        this.baseUrl = 'http://localhost:8080'; 
+        this.baseUrl = 'http://localhost:8080';
         this.apiEndpoint = '/api/itineraries';
     }
 
     getAuthToken() {
-        return localStorage.getItem('JWT_TOKEN');
+        return localStorage.getItem('authToken');
     }
 
     async saveItinerary(itineraryData, userId) {
         const authToken = this.getAuthToken();
-        
+
         if (!authToken) {
             throw new Error('Authentication token not found. Please log in again.');
         }
@@ -24,7 +24,7 @@ class ItineraryService {
         }
 
         const url = `${this.baseUrl}${this.apiEndpoint}?userId=${encodeURIComponent(userId)}`;
-        
+
         const requestBody = {
             destination: itineraryData.destination,
             fullItinerary: itineraryData.fullItinerary,
@@ -62,15 +62,7 @@ class ItineraryService {
 
     async getUserItineraries(userId) {
         const authToken = this.getAuthToken();
-        const currentUser = localStorage.getItem('CURRENT_USER');
-        
-        if (!currentUser) {
-            throw new Error('User not logged in');
-        }
-        
-        const user = JSON.parse(currentUser);
-        const userName = user.userName;
-        
+
         if (!authToken) {
             throw new Error('Authentication token not found. Please log in again.');
         }
@@ -80,13 +72,12 @@ class ItineraryService {
         }
 
         const url = `${this.baseUrl}${this.apiEndpoint}?userId=${encodeURIComponent(userId)}`;
-        
+
         try {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'userName': userName
+                    'Authorization': `Bearer ${authToken}`
                 }
             });
 
@@ -94,58 +85,12 @@ class ItineraryService {
                 const errorData = await response.json().catch(() => null);
                 throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
             }
+
             const responseData = await response.json();
             return responseData;
 
         } catch (error) {
             console.error('Error fetching user itineraries:', error);
-            throw error;
-        }
-    }
-
-    async searchItineraries(userId, searchTerm) {
-        const authToken = this.getAuthToken();
-        const currentUser = localStorage.getItem('CURRENT_USER');
-        
-        if (!currentUser) {
-            throw new Error('User not logged in');
-        }
-        
-        const user = JSON.parse(currentUser);
-        const userName = user.userName;
-        
-        if (!authToken) {
-            throw new Error('Authentication token not found. Please log in again.');
-        }
-
-        if (!userId) {
-            throw new Error('User ID is required');
-        }
-
-        if (!searchTerm || searchTerm.trim() === '') {
-            throw new Error('Search term is required');
-        }
-
-        const url = `${this.baseUrl}/api/itineraries/search?userId=${encodeURIComponent(userId)}&searchTerm=${encodeURIComponent(searchTerm.trim())}`;
-        
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'userName': userName
-                }
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
-            }
-            const responseData = await response.json();
-            return responseData;
-
-        } catch (error) {
-            console.error('Error searching itineraries:', error);
             throw error;
         }
     }
@@ -155,17 +100,10 @@ const itineraryService = new ItineraryService();
 
 async function saveUserItinerary(destination, fullItinerary, options = {}) {
     try {
-        const currentUser = localStorage.getItem('CURRENT_USER');
-        
-        if (!currentUser) {
-            throw new Error('User not logged in');
-        }
-        
-        const user = JSON.parse(currentUser);
-        const userId = user.id;
-        
+        const userId = localStorage.getItem('userId');
+
         if (!userId) {
-            throw new Error('User ID not found');
+            throw new Error('User not logged in');
         }
 
         const itineraryData = {
@@ -179,9 +117,9 @@ async function saveUserItinerary(destination, fullItinerary, options = {}) {
         };
 
         const result = await itineraryService.saveItinerary(itineraryData, userId);
-        
+
         showNotification('Itinerary saved to your search history!', 'success');
-        
+
         return result;
     } catch (error) {
         console.error('Failed to save itinerary:', error);
@@ -209,7 +147,7 @@ function showNotification(message, type = 'info') {
     `;
 
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.opacity = '1';
     }, 100);
@@ -224,4 +162,4 @@ function showNotification(message, type = 'info') {
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { ItineraryService, itineraryService, saveUserItinerary };
-} 
+}
